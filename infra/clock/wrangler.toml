@@ -1,0 +1,11 @@
+name = "padeltime-clock"
+main = "worker.mjs"
+compatibility_date = "2026-10-19"
+workers_dev = false
+# Keep Cloudflare Workers FREE. Do not enable paid Workers or a billing subscription.
+[triggers]
+crons = ["*/3 * * * *"]
+[vars]
+# Set to your existing Vercel Hobby deployment, never a user-supplied URL.
+COLLECT_URL = "https://REPLACE.vercel.app/api/collect"
+# Store COLLECT_SECRET with `wrangler secret put COLLECT_SECRET`.

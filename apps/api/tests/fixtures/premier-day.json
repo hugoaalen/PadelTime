@@ -1,0 +1,158 @@
+{
+  "status": true,
+  "message": "Tournament get successfully.",
+  "data": {
+    "date": [
+      "2026-10-10",
+      "2026-10-11",
+      "2026-10-12",
+      "2026-10-13",
+      "2026-10-14",
+      "2026-10-15",
+      "2026-10-16",
+      "2026-10-17",
+      "2026-10-18"
+    ],
+    "type": "P1",
+    "slug": "milano-p1-2",
+    "status": "P",
+    "courts": [
+      {
+        "court_id": "4197008",
+        "court_name": "CENTRE COURT",
+        "start_of_play": "15:00:00",
+        "matches": [
+          {
+            "match_id": "18888",
+            "status": "F",
+            "status_title": "COMPLETADO",
+            "round_name": "F",
+            "date": "2026-10-18",
+            "start_time": "15:00",
+            "duration": "01:57:52",
+            "start_date_time": "2026-10-18 13:00:00",
+            "draw_type": "MD",
+            "day": "9",
+            "winner_id": "1",
+            "server": 0,
+            "broadcast_type": "redbull",
+            "broadcast_url": "https://www.redbull.com/us-en/event-series/premier-padel",
+            "highlight_url": "",
+            "ticket_url": "https://milanopremierpadel.ticketone.it/catalog",
+            "header": "Not before 5:00 PM",
+            "current_round": "F",
+            "winner_display": "A. Tapia/A. Coello",
+            "teams": [
+              {
+                "id": "37765",
+                "tournament_id": "274",
+                "match_id": "18888",
+                "team_no": 1,
+                "seed_number": 1,
+                "team_ranking": null,
+                "status": "",
+                "score": {
+                  "set1": 4,
+                  "set2": 6,
+                  "set3": 6,
+                  "set4": null,
+                  "set5": null,
+                  "tie1": -1,
+                  "tie2": -1,
+                  "tie3": -1,
+                  "tie4": null,
+                  "tie5": null,
+                  "points": null,
+                  "remainingChallenges": null
+                },
+                "players": [
+                  {
+                    "id": "72142",
+                    "player_id": 14945,
+                    "first_name": "Arturo",
+                    "last_name": "Coello",
+                    "partner_type": "partner",
+                    "player_rank": 1,
+                    "gender": "male",
+                    "country_code": "ESP",
+                    "singles_rank": 19911,
+                    "doubles_rank": 1,
+                    "flag_url": "https://cdn.premierpadel.com/fleg/esp.png",
+                    "is_favourite": false
+                  },
+                  {
+                    "id": "72141",
+                    "player_id": 15096,
+                    "first_name": "Agustin",
+                    "last_name": "Tapia",
+                    "partner_type": "main",
+                    "player_rank": 1,
+                    "gender": "male",
+                    "country_code": "ARG",
+                    "singles_rank": 19911,
+                    "doubles_rank": 1,
+                    "flag_url": "https://cdn.premierpadel.com/fleg/arg.png",
+                    "is_favourite": false
+                  }
+                ]
+              },
+              {
+                "id": "37766",
+                "tournament_id": "274",
+                "match_id": "18888",
+                "team_no": 2,
+                "seed_number": 3,
+                "team_ranking": null,
+                "status": "",
+                "score": {
+                  "set1": 6,
+                  "set2": 3,
+                  "set3": 2,
+                  "set4": null,
+                  "set5": null,
+                  "tie1": -1,
+                  "tie2": -1,
+                  "tie3": -1,
+                  "tie4": null,
+                  "tie5": null,
+                  "points": null,
+                  "remainingChallenges": null
+                },
+                "players": [
+                  {
+                    "id": "72146",
+                    "player_id": 14937,
+                    "first_name": "Juan",
+                    "last_name": "Lebron",
+                    "partner_type": "partner",
+                    "player_rank": 5,
+                    "gender": "male",
+                    "country_code": "ESP",
+                    "singles_rank": 7770,
+                    "doubles_rank": 5,
+                    "flag_url": "https://cdn.premierpadel.com/fleg/esp.png",
+                    "is_favourite": false
+                  },
+                  {
+                    "id": "72145",
+                    "player_id": 16222,
+                    "first_name": "Leandro Roman",
+                    "last_name": "Augsburger",
+                    "partner_type": "main",
+                    "player_rank": 6,
+                    "gender": "male",
+                    "country_code": "ARG",
+                    "singles_rank": 7333,
+                    "doubles_rank": 6,
+                    "flag_url": "https://cdn.premierpadel.com/fleg/arg.png",
+                    "is_favourite": false
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

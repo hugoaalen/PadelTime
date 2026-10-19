@@ -1,0 +1,7 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Clients use authenticated API; only service account can access storage.
+    match /{document=**} { allow read, write: if false; }
+  }
+}

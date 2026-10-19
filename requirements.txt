@@ -1,0 +1,3 @@
+# Serverless production entrypoint; no SQLite or long-running lifespan worker.
+-r apps/api/requirements.txt
+firebase-admin>=6.9,<8

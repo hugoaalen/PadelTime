@@ -1,0 +1,1 @@
+{"name":"padeltime","private":true,"scripts":{"dev":"pnpm --dir apps/web dev","build":"pnpm --dir apps/web build"}}
