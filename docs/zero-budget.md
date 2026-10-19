@@ -1,6 +1,6 @@
-# Zero-budget profile — prepared locally, not deployed
+# Zero-budget profile — Vercel deployed, Firebase pending
 
-**Hard requirement: no mandatory payment, trial, credit card or billing-enabled project.** No accounts, repository, project or deployment were created. This repo currently runs locally. Nothing here enables Blaze or purchases a paid API.
+**Hard requirement: no mandatory payment, trial, credit card or billing-enabled project.** Vercel Hobby project `hugoaalen-projects/padeltime` is deployed at https://padeltime-two.vercel.app and connected to GitHub. Firebase and Cloudflare remain unconfigured. Nothing here enables Blaze or purchases a paid API.
 
 ## Selected architecture
 
@@ -23,7 +23,7 @@ Free plan limits are service limits, not an uptime SLA. Requests may fail or be 
 
 ## Concrete code
 
-- `api/index.py` / `padeltime/cloud.py`: separate serverless app, avoiding SQLite and embedded infinite worker.
+- `apps/api/padeltime/cloud.py` (`padeltime/cloud.py`): separate serverless app, avoiding SQLite and embedded infinite worker.
 - `cloud_state.py`: shared pure transition/outbox logic. Confirmed warm-up, live and finish transitions; unknown court order never creates predecessor alerts.
 - `infra/clock`: signed cron, fixed destination, no public manual trigger. Three-minute polling, not second-by-second live coverage.
 - Firestore transactions hold short collector lease, monotonic revisions, deduplicated inbox and preference updates. Different processes use durable state. FCM delivery is retried; a stable event ID/tag limits duplicate visible notifications. Push is not an exactly-once delivery guarantee.
@@ -39,7 +39,7 @@ Collector discovers the tournament metadata currently embedded in Premier's publ
 
 ## When accounts exist — setup checklist
 
-These are future user setup steps, not actions already performed:
+Vercel project creation and GitHub linking are complete. Remaining Firebase/Cloudflare setup follows:
 
 1. Create personal GitHub repository (optional for CLI deployment) and Vercel Hobby project at repo root. Use `vercel.json`; no Vercel cron is configured. If a paid plan or card is demanded, stop.
 2. Create Firebase project on Spark, without Google Cloud billing. Enable anonymous sign-in, create Firestore database on free quota and apply `infra/firestore.rules`. Enable Firebase Cloud Messaging web configuration/VAPID public key. Add deployment domain to Auth authorized domains.
@@ -63,4 +63,18 @@ cd apps/api
 .venv/bin/python -m pytest -q
 ```
 
-Local existing `padeltime.main:app` retains demo/snapshot behavior. Production entrypoint is `api/index.py`. For a local production PWA preview use `pnpm --dir apps/web exec vite preview --host 127.0.0.1`; Firebase controls remain disabled without configuration. A local preview cannot replace a real iOS/Android push delivery test.
+Local existing `padeltime.main:app` retains demo/snapshot behavior. Production service entrypoint is `asgi.py`, forwarding to `padeltime.cloud.app`, rooted at `apps/api`; `api/index.py` is a legacy compatibility wrapper, not a third service. For a local production PWA preview use `pnpm --dir apps/web exec vite preview --host 127.0.0.1`; Firebase controls remain disabled without configuration. A local preview cannot replace a real iOS/Android push delivery test.
+
+## Vercel Services routing
+
+Root `vercel.json` defines two independently built services: `web` (Vite at `apps/web`) and `api` (FastAPI at `apps/api`). Public `/api` and `/api/*` go to `api`, preserving the original path; all other requests go to `web`. Web service rewrites navigation URLs to `index.html`, leaving assets and service worker paths intact. Keep Vercel project Root Directory at repository root.
+
+There are no server-to-server calls between these services, so no service bindings are declared. Browser JavaScript calls same-origin `/api`, not an internal service URL. Leave `VITE_API_URL` unset or `/api`; never expose runtime binding URLs via `VITE_*`. Firebase and Premier are external dependencies, not services in this project. Cloudflare calls the public signed `/api/collect` endpoint.
+
+Run `vercel dev -L` from repository root with a current Vercel CLI to test both services together. Existing `pnpm dev` plus local Python server remains a separate developer workflow; its localhost proxy is not a production service call. Production Firebase configuration is still required.
+
+## Production verification — 19 October 2026
+
+Vercel built both services successfully with Python 3.12. Public checks on `https://padeltime-two.vercel.app`: `/` and `/settings` return HTML 200; manifest and `/sw.js` return 200 with correct content types; `/api/health` returns intentional JSON 503 requesting Firebase Spark configuration; unknown API route returns JSON 404. `VITE_CLOUD_MODE=true` is saved in Vercel Production configuration. No Firebase credentials, real snapshot or push delivery are configured.
+
+The explicit `apps/api/asgi.py` callable forwards ASGI scopes to the cloud FastAPI app. It avoids the deployed Python analyzer rejecting the original module entrypoint. Local ASGI smoke test confirms the same missing-configuration 503 and unknown-route 404.

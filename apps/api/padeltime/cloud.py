@@ -19,7 +19,7 @@ from .collectors.premier import (Snapshot, PublicClient, SITE, USER_AGENT, tourn
 from .domain import Match, tracking
 import httpx
 
-app=FastAPI(title='PadelTime · zero-budget deployment')
+app = FastAPI(title='PadelTime · zero-budget deployment')
 _client=None
 
 def database():
