@@ -1,6 +1,6 @@
 # Zero-budget profile — Vercel and Firebase connected
 
-**Hard requirement: no mandatory payment, trial, credit card or billing-enabled project.** Vercel Hobby project `hugoaalen-projects/padeltime` is deployed at https://padeltime-two.vercel.app and connected to GitHub. Firebase Spark project `padeltime-999e5` is connected; Cloudflare remains unconfigured. Nothing here enables Blaze or purchases a paid API.
+**Hard requirement: no mandatory payment, trial, credit card or billing-enabled project.** Vercel Hobby project `hugoaalen-projects/padeltime` is deployed at https://padeltime-two.vercel.app and connected to GitHub. Firebase Spark project `padeltime-999e5` is connected; Cloudflare Workers Free clock `padeltime-clock` is deployed. Nothing here enables Blaze or purchases a paid API.
 
 ## Selected architecture
 
@@ -85,4 +85,14 @@ Firebase Spark project `padeltime-999e5`: anonymous Auth enabled; default Firest
 
 Production was redeployed and a signed `/api/collect` request returned HTTP 200, state `idle`, zero matches. `/api/health` returns HTTP 200 with source `premier-public-web`; `/api/tournaments` returns upcoming Kuwait Major metadata. No active tournament was discovered in public homepage metadata; no match result or live alert was fabricated. This verifies server-side collection and Firestore persistence, not full circuit coverage or mobile push.
 
-Cloudflare clock is not deployed. Its destination is now configured for `https://padeltime-two.vercel.app/api/collect`; future setup must install the same signing secret without printing it. FCM VAPID setup, physical-device push test, and automatic scheduling remain pending.
+Cloudflare clock is deployed with schedule `*/3 * * * *` and `workers_dev=false`. Its destination is `https://padeltime-two.vercel.app/api/collect`; the shared signing secret is installed as a Worker secret without printing it. FCM VAPID setup and physical-device push test remain pending.
+
+## Cloudflare clock — 19 October 2026
+
+Deployed `infra/clock/worker.mjs` to account `fdf823faec995b943f665974ae99576b`, Worker `padeltime-clock`, version `e8f15a97-5b5b-4bf6-aca7-b4837620e26f`. Wrangler confirmed cron `*/3 * * * *`. `COLLECT_SECRET` is a Worker secret; public variable `COLLECT_URL` points to the signed Vercel collector. `workers_dev=false` removes the public worker URL. No paid subscription, DNS, KV, R2 or billing feature was activated.
+
+Wrangler OAuth permission scope was limited to account/user read, Workers scripts write, tail read and mandatory background access, with explicit user consent. Credentials remain outside this repository.
+
+First actual scheduled invocation exposed a Workers runtime incompatibility with Fetch `redirect: error`. Updated to `redirect: manual`; all non-2xx responses, including 3xx redirects, are rejected without following them. Added a regression test proving no redirect follow-up request or signature forwarding. Three clock tests pass.
+
+Automatic end-to-end execution verified: Cloudflare tail reported `outcome: ok`, no exceptions, CPU time 1 ms, wall time 7,926 ms for deployed version `e8f15a97-5b5b-4bf6-aca7-b4837620e26f`. Firestore collector control independently recorded `last_attempt=2026-10-19T18:07:04.814768+00:00`, `last_success=2026-10-19T18:07:08.398929+00:00`, state `idle`, cycles 2, no error. No manual collector request was sent during this verification. Dashboard confirms current Workers plan `Gratuito`, 0 USD.

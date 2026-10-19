@@ -1,4 +1,5 @@
 name = "padeltime-clock"
+account_id = "fdf823faec995b943f665974ae99576b"
 main = "worker.mjs"
 compatibility_date = "2026-10-19"
 workers_dev = false
