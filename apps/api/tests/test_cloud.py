@@ -79,3 +79,40 @@ def test_missing_then_returning_fixture_keeps_revision_ledger():
     returned=capture('FINISHED');data,events=evolve(data,returned,{'u':{'favorites':['p'],'events':[]}})
     assert data['matches'][0]['revision']==2
     assert events['u']['events'][0]['kind']=='finished'
+
+
+def test_closed_app_test_queue_retry_expiry_and_delivery(monkeypatch):
+    records={'u':{'token':'x'*30,'enabled':False}}
+    sent=[]
+    monkeypatch.setattr(cloud,'current_device',lambda request:('u',copy.deepcopy(records['u'])))
+    monkeypatch.setattr(cloud,'device_list',lambda:copy.deepcopy(records))
+    monkeypatch.setattr(cloud,'put_device',lambda identity,patch:records[identity].update(patch))
+    client=TestClient(cloud.app)
+    assert client.post('/api/push/test-closed').json()['queued']
+    assert client.post('/api/push/test-closed').status_code==429
+    def fail(*args):raise RuntimeError('Temporary FCM failure')
+    monkeypatch.setattr(cloud,'send_push',fail)
+    assert cloud.deliver_tests()==0
+    assert records['u']['pending_test']
+    monkeypatch.setattr(cloud,'send_push',lambda token,event:sent.append(event))
+    assert cloud.deliver_tests()==1
+    assert records['u']['pending_test'] is None
+    assert cloud.deliver_tests()==0
+    assert len(sent)==1 and sent[0]['id'].startswith('test-')
+    records['u']['pending_test']={**sent[0],'created_at':(datetime.now(timezone.utc)-timedelta(minutes=11)).isoformat()}
+    assert cloud.deliver_tests()==0
+    assert records['u']['pending_test'] is None
+    assert len(sent)==1
+
+def test_closed_app_test_requires_subscription(monkeypatch):
+    monkeypatch.setattr(cloud,'current_device',lambda request:('u',{}))
+    assert TestClient(cloud.app).post('/api/push/test-closed').status_code==409
+
+def test_signed_collector_delivers_tests_even_when_collection_blocked(monkeypatch):
+    calls=[]
+    monkeypatch.setattr(cloud,'valid_signature',lambda *args:True)
+    monkeypatch.setattr(cloud,'deliver_tests',lambda:calls.append('test') or 1)
+    monkeypatch.setattr(cloud,'acquire',lambda:('owner',None))
+    r=TestClient(cloud.app).post('/api/collect')
+    assert r.json()['skipped'] and r.json()['test_push_submitted']==1
+    assert calls==['test']

@@ -31,6 +31,7 @@ export function PushSettings(){
   <div className="demo-buttons">
    <button disabled={!firebaseConfigured||busy} onClick={enable}>Enable device notifications</button>
    <button disabled={!firebaseConfigured||busy} onClick={()=>action('/push/test','Test submitted. Check device notifications.')}>Test notification</button>
+   {import.meta.env.VITE_CLOUD_MODE==='true'&&<button disabled={!firebaseConfigured||busy} onClick={()=>action('/push/test-closed','Prueba en cola. Cierra la app ahora; el aviso llegará con el próximo cron, normalmente en 3–4 minutos.')}>Probar con app cerrada</button>}
    <button disabled={!firebaseConfigured||busy} onClick={()=>action('/push/disable','Device push disabled.')}>Disable device push</button>
   </div>
   <p role="status">{status||(!firebaseConfigured?'Firebase Spark project not configured. Push is not active.':'Notifications require your permission and a supported browser.')}</p>

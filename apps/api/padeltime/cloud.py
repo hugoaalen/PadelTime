@@ -189,6 +189,35 @@ def test_push(request:Request):
     return {'submitted':True}
 
 
+@app.post('/api/push/test-closed')
+def queue_test_push(request:Request):
+    identity,device=current_device(request)
+    if not device.get('token'):raise HTTPException(409,'Enable notifications on this device first.')
+    now=datetime.now(timezone.utc)
+    last=device.get('last_test')
+    if last and (now-datetime.fromisoformat(last)).total_seconds()<60:raise HTTPException(429,'Wait one minute between tests.')
+    event={'id':'test-'+secrets.token_hex(6),'created_at':now.isoformat(),
+        'message':'PadelTime: prueba con app cerrada. No es un aviso de partido real.'}
+    put_device(identity,{'last_test':now.isoformat(),'pending_test':event})
+    return {'queued':True,'expected_within_seconds':240}
+
+
+def deliver_tests():
+    """Explicit device tests run even when source collection is idle or blocked."""
+    now=datetime.now(timezone.utc);count=0
+    for identity,device in device_list().items():
+        event=device.get('pending_test')
+        if not event:continue
+        age=(now-datetime.fromisoformat(event['created_at'])).total_seconds()
+        if age>600 or not device.get('token'):
+            put_device(identity,{'pending_test':None});continue
+        if age<0:continue
+        try:send_push(device['token'],event)
+        except Exception:continue
+        put_device(identity,{'pending_test':None});count+=1
+    return count
+
+
 def acquire():
     from firebase_admin import firestore
     db=database();ref=db.collection('control').document('collector');owner=secrets.token_hex(12)
@@ -272,17 +301,20 @@ def deliver():
 async def collect_route(request:Request):
     if not valid_signature(os.getenv('COLLECT_SECRET',''),request.headers.get('x-padeltime-time',''),request.headers.get('x-padeltime-signature','')):
         raise HTTPException(401,'Invalid collector signature.')
+    tests_sent=0;tests_pending=False
+    try:tests_sent=await asyncio.wait_for(asyncio.to_thread(deliver_tests),timeout=5)
+    except Exception:tests_pending=True
     owner,state=acquire()
-    if state is None:return {'skipped':True}
+    if state is None:return {'skipped':True,'test_push_submitted':tests_sent,'test_push_pending':tests_pending}
     try:
         previous=get_record('catalog','current');devices=device_list()
-        snapshot,mode=await asyncio.wait_for(discover_snapshot(previous),timeout=40)
+        snapshot,mode=await asyncio.wait_for(discover_snapshot(previous),timeout=35)
         commit_capture(owner,state,snapshot,mode,previous,devices)
         sent=0;pending=False
         if mode=='running':
-            try:sent=await asyncio.wait_for(asyncio.to_thread(deliver),timeout=10)
+            try:sent=await asyncio.wait_for(asyncio.to_thread(deliver),timeout=5)
             except Exception:pending=True
-        return {'state':mode,'push_submitted':sent,'push_pending':pending,'matches':len(snapshot.matches)}
+        return {'state':mode,'push_submitted':sent,'push_pending':pending,'matches':len(snapshot.matches),'test_push_submitted':tests_sent,'test_push_pending':tests_pending}
     except Exception as exc:
         from firebase_admin import firestore
         db=database();ref=db.collection('control').document('collector')

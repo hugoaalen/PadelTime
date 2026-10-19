@@ -85,7 +85,7 @@ Firebase Spark project `padeltime-999e5`: anonymous Auth enabled; default Firest
 
 Production was redeployed and a signed `/api/collect` request returned HTTP 200, state `idle`, zero matches. `/api/health` returns HTTP 200 with source `premier-public-web`; `/api/tournaments` returns upcoming Kuwait Major metadata. No active tournament was discovered in public homepage metadata; no match result or live alert was fabricated. This verifies server-side collection and Firestore persistence, not full circuit coverage or mobile push.
 
-Cloudflare clock is deployed with schedule `*/3 * * * *` and `workers_dev=false`. Its destination is `https://padeltime-two.vercel.app/api/collect`; the shared signing secret is installed as a Worker secret without printing it. FCM VAPID setup and physical-device push test remain pending.
+Cloudflare clock is deployed with schedule `*/3 * * * *` and `workers_dev=false`. Its destination is `https://padeltime-two.vercel.app/api/collect`; the shared signing secret is installed as a Worker secret without printing it. Public FCM VAPID configuration is saved in Vercel; physical-device push test remains pending.
 
 ## Cloudflare clock — 19 October 2026
 
@@ -96,3 +96,13 @@ Wrangler OAuth permission scope was limited to account/user read, Workers script
 First actual scheduled invocation exposed a Workers runtime incompatibility with Fetch `redirect: error`. Updated to `redirect: manual`; all non-2xx responses, including 3xx redirects, are rejected without following them. Added a regression test proving no redirect follow-up request or signature forwarding. Three clock tests pass.
 
 Automatic end-to-end execution verified: Cloudflare tail reported `outcome: ok`, no exceptions, CPU time 1 ms, wall time 7,926 ms for deployed version `e8f15a97-5b5b-4bf6-aca7-b4837620e26f`. Firestore collector control independently recorded `last_attempt=2026-10-19T18:07:04.814768+00:00`, `last_success=2026-10-19T18:07:08.398929+00:00`, state `idle`, cycles 2, no error. No manual collector request was sent during this verification. Dashboard confirms current Workers plan `Gratuito`, 0 USD.
+
+## Closed-app push test — ready for device validation
+
+Firebase web push VAPID pair was generated with explicit consent; only its public key is stored as `VITE_FIREBASE_VAPID_KEY` in Vercel Production. Firebase manages the private VAPID key. No private VAPID key is in the repository.
+
+Production Settings includes **Probar con app cerrada** after enabling device notifications. It calls authenticated `POST /api/push/test-closed`, reserves the existing 60-second test cooldown and stores one pending test on that device. Close the installed PWA after the queue confirmation. The next signed Cloudflare tick normally submits it within 3–4 minutes; actual mobile delivery depends on browser, network and OS. Tests expire after ten minutes, retry on FCM failure, and are cleared after successful FCM submission. Queued tests are processed before source collection, including when no tournament is active or source polling is blocked. They explicitly identify themselves as tests, never real match alerts.
+
+Physical check: install PWA (iPhone: Safari → Share → Add to Home Screen), reopen from icon, Settings → Enable device notifications → allow permission → Probar con app cerrada → wait for queue confirmation → close app → verify notification and tap navigation. No phone notification has been observed by the agent.
+
+Validation: 40 backend tests pass, covering queue subscription requirements, cooldown, transient retry, expiry, clearing after submission and signed tick delivery with blocked source collection. Cloud request timeouts were shortened to leave time for test delivery inside the 60-second Vercel limit.
