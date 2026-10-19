@@ -1,6 +1,6 @@
-# Zero-budget profile — Vercel deployed, Firebase pending
+# Zero-budget profile — Vercel and Firebase connected
 
-**Hard requirement: no mandatory payment, trial, credit card or billing-enabled project.** Vercel Hobby project `hugoaalen-projects/padeltime` is deployed at https://padeltime-two.vercel.app and connected to GitHub. Firebase and Cloudflare remain unconfigured. Nothing here enables Blaze or purchases a paid API.
+**Hard requirement: no mandatory payment, trial, credit card or billing-enabled project.** Vercel Hobby project `hugoaalen-projects/padeltime` is deployed at https://padeltime-two.vercel.app and connected to GitHub. Firebase Spark project `padeltime-999e5` is connected; Cloudflare remains unconfigured. Nothing here enables Blaze or purchases a paid API.
 
 ## Selected architecture
 
@@ -78,3 +78,11 @@ Run `vercel dev -L` from repository root with a current Vercel CLI to test both 
 Vercel built both services successfully with Python 3.12. Public checks on `https://padeltime-two.vercel.app`: `/` and `/settings` return HTML 200; manifest and `/sw.js` return 200 with correct content types; `/api/health` returns intentional JSON 503 requesting Firebase Spark configuration; unknown API route returns JSON 404. `VITE_CLOUD_MODE=true` is saved in Vercel Production configuration. No Firebase credentials, real snapshot or push delivery are configured.
 
 The explicit `apps/api/asgi.py` callable forwards ASGI scopes to the cloud FastAPI app. It avoids the deployed Python analyzer rejecting the original module entrypoint. Local ASGI smoke test confirms the same missing-configuration 503 and unknown-route 404.
+
+## Firebase production connection — 19 October 2026
+
+Firebase Spark project `padeltime-999e5`: anonymous Auth enabled; default Firestore Standard database in `europe-southwest1` with deny-all client rules. Public web configuration and `FIREBASE_PLAN=spark` are saved in Vercel Production. Service account JSON is stored as Vercel Secret `FIREBASE_SERVICE_ACCOUNT`; collector signing secret is stored as Vercel Secret `COLLECT_SECRET`. Neither credential is in this repository.
+
+Production was redeployed and a signed `/api/collect` request returned HTTP 200, state `idle`, zero matches. `/api/health` returns HTTP 200 with source `premier-public-web`; `/api/tournaments` returns upcoming Kuwait Major metadata. No active tournament was discovered in public homepage metadata; no match result or live alert was fabricated. This verifies server-side collection and Firestore persistence, not full circuit coverage or mobile push.
+
+Cloudflare clock is not deployed. Its destination is now configured for `https://padeltime-two.vercel.app/api/collect`; future setup must install the same signing secret without printing it. FCM VAPID setup, physical-device push test, and automatic scheduling remain pending.

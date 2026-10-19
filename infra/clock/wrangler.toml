@@ -7,5 +7,5 @@ workers_dev = false
 crons = ["*/3 * * * *"]
 [vars]
 # Set to your existing Vercel Hobby deployment, never a user-supplied URL.
-COLLECT_URL = "https://REPLACE.vercel.app/api/collect"
+COLLECT_URL = "https://padeltime-two.vercel.app/api/collect"
 # Store COLLECT_SECRET with `wrangler secret put COLLECT_SECRET`.
