@@ -7,6 +7,7 @@ import json
 import os
 import secrets
 import tempfile
+from typing import Literal
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
@@ -140,28 +141,30 @@ class Preferences(BaseModel):
     favorites:list[str]=Field(max_length=30)
     enabled:bool=True
     audience:str=''  # ignored: identity comes from verified Firebase token
+    language:Literal['en','es']='en'
 
 @app.post('/api/notifications/sync')
 def sync(request:Request,body:Preferences):
     identity,device=current_device(request)
     allowed={p.id for p in read_snapshot().players}
     favorites=sorted(set(body.favorites)&allowed)
-    if not device.get('registered') or device.get('favorites')!=favorites or device.get('enabled')!=body.enabled:
+    if not device.get('registered') or device.get('favorites')!=favorites or device.get('enabled')!=body.enabled or device.get('language')!=body.language:
         if not device.get('registered') and identity not in device_list() and len(device_list())>=MAX_DEVICES:
             raise HTTPException(503,'Free pilot device capacity reached.')
         device.update(favorites=favorites,enabled=body.enabled,registered=True)
-        put_device(identity,{'favorites':favorites,'enabled':body.enabled,'registered':True})
+        put_device(identity,{'favorites':favorites,'enabled':body.enabled,'registered':True,'language':body.language})
     return device['events']
 
 class PushToken(BaseModel):
     token:str=Field(min_length=20,max_length=4096)
+    language:Literal['en','es']='en'
 
 @app.post('/api/push/register')
 def register_push(request:Request,body:PushToken):
     identity,device=current_device(request)
     if identity not in device_list() and len(device_list())>=MAX_DEVICES:raise HTTPException(503,'Free pilot device capacity reached.')
     device.update(token=body.token,registered=True)
-    put_device(identity,{'token':body.token,'registered':True})
+    put_device(identity,{'token':body.token,'registered':True,'language':body.language})
     return {'registered':True}
 
 @app.post('/api/push/disable')
@@ -170,9 +173,23 @@ def disable_push(request:Request):
     return {'disabled':True}
 
 
+PUSH_SPANISH={
+ 'scheduled':'Tu jugador tiene un partido programado. La hora de inicio puede cambiar.',
+ 'approaching':'La fuente confirma calentamiento. Tu jugador se prepara para jugar.',
+ 'started':'La fuente indica que el partido que sigues está en directo.',
+ 'finished':'La fuente indica que el partido que sigues ha terminado.',
+ 'schedule_changed':'La fuente cambió el horario o el estado del partido que sigues.',
+ 'previous_finished':'Terminó el partido anterior. Aún se aplican el tiempo de cambio y el horario oficial.'
+}
+def push_message(event):
+    if event.get('language')!='es':return event['message']
+    if event['id'].startswith('test-'):return 'PadelTime: prueba de notificación. No es un aviso de partido real.'
+    kind=event.get('kind')
+    return PUSH_SPANISH.get(kind,event['message'])
+
 def send_push(token,event):
     from firebase_admin import messaging
-    message=messaging.Message(token=token,data={'title':'PadelTime','body':event['message'],
+    message=messaging.Message(token=token,data={'title':'PadelTime','body':push_message(event),
         'event_id':event['id'],'url':'/matches/'+event['match_id'] if event.get('match_id') else '/'},
         webpush=messaging.WebpushConfig(headers={'TTL':'180','Urgency':'high'}))
     messaging.send(message)
@@ -185,7 +202,7 @@ def test_push(request:Request):
     last=device.get('last_test')
     if last and (now-datetime.fromisoformat(last)).total_seconds()<60:raise HTTPException(429,'Wait one minute between tests.')
     device['last_test']=now.isoformat();put_device(identity,{'last_test':device['last_test']})
-    send_push(device['token'],{'id':'test-'+secrets.token_hex(6),'message':'Device test: PadelTime push works. This is not a real match alert.'})
+    send_push(device['token'],{'id':'test-'+secrets.token_hex(6),'message':'Device test: PadelTime push works. This is not a real match alert.','language':device.get('language','en')})
     return {'submitted':True}
 
 
@@ -197,7 +214,7 @@ def queue_test_push(request:Request):
     last=device.get('last_test')
     if last and (now-datetime.fromisoformat(last)).total_seconds()<60:raise HTTPException(429,'Wait one minute between tests.')
     event={'id':'test-'+secrets.token_hex(6),'created_at':now.isoformat(),
-        'message':'PadelTime: prueba con app cerrada. No es un aviso de partido real.'}
+        'message':'PadelTime: closed-app test. This is not a real match alert.'}
     put_device(identity,{'last_test':now.isoformat(),'pending_test':event})
     return {'queued':True,'expected_within_seconds':240}
 
@@ -212,7 +229,7 @@ def deliver_tests():
         if age>600 or not device.get('token'):
             put_device(identity,{'pending_test':None});continue
         if age<0:continue
-        try:send_push(device['token'],event)
+        try:send_push(device['token'],{**event,'language':device.get('language','en')})
         except Exception:continue
         put_device(identity,{'pending_test':None});count+=1
     return count
@@ -287,7 +304,7 @@ def deliver():
             if (now-datetime.fromisoformat(event['created_at'])).total_seconds()>180:
                 sent.add(event['id']);continue
             if count>=20:break
-            try:send_push(device['token'],event)
+            try:send_push(device['token'],{**event,'language':device.get('language','en')})
             except Exception:
                 # Preserve pending event; do not mark failures delivered.
                 continue

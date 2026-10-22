@@ -106,3 +106,13 @@ Production Settings includes **Probar con app cerrada** after enabling device no
 Physical check: install PWA (iPhone: Safari → Share → Add to Home Screen), reopen from icon, Settings → Enable device notifications → allow permission → Probar con app cerrada → wait for queue confirmation → close app → verify notification and tap navigation. No phone notification has been observed by the agent.
 
 Validation: 40 backend tests pass, covering queue subscription requirements, cooldown, transient retry, expiry, clearing after submission and signed tick delivery with blocked source collection. Cloud request timeouts were shortened to leave time for test delivery inside the 60-second Vercel limit.
+
+## System language and appearance — 22 October 2026
+
+Web UI now follows browser/device language preferences (Spanish and English supported; unsupported languages fall back to English) and `prefers-color-scheme` by default. Settings offers `System default` plus explicit language and light/dark overrides. Overrides persist per device. Browser language and color-scheme changes are observed while the app is open. Dates/times and accessible labels use the selected language; document language, title and browser theme color update too.
+
+Old `pn-appearance` was automatically saved as dark for everyone, so it cannot distinguish an explicit selection from the old default. The new `pt-appearance` preference starts in system mode, preserving all favorites, time zone and push subscriptions. Subsequent manual choices persist. `pt-language` stores the optional language override.
+
+Authenticated registration and preference synchronization save supported language on the device record. Match alerts and explicit push tests use this device language. While an app is closed, server-generated push uses its last synchronized language; reopening synchronizes subsequent system changes. Public tournament/player names and source locations remain as supplied by the source.
+
+Verification: `node scripts/test-preferences.mjs` covers language priority/regional fallback, system vs manual themes and schedule translation. Backend tests verify language persistence, supported-language validation and translated push content. Browser checks confirmed Spanish automatic detection, switching to English/light, persistence after reload and restoration to automatic Spanish/system theme.

@@ -8,3 +8,5 @@
 dialog.inbox{margin:80px 25px auto auto;color:var(--text);position:fixed;inset:0;padding:22px;max-height:calc(100dvh - 150px)}dialog.inbox::backdrop{background:#0009;backdrop-filter:blur(4px)}dialog:not([open]){display:none}@media(max-width:650px){dialog.inbox{margin:auto 12px calc(85px + env(safe-area-inset-bottom));width:calc(100% - 24px);max-height:calc(100dvh - 160px)}}
 .source-banner{margin:20px 5% 0;padding:14px 18px;border:1px solid #8c7850;border-radius:9px;background:var(--surface);font-size:12px;line-height:1.8}.source-banner strong{display:block;color:#d5b87d;font-weight:550}.source-banner span{color:var(--muted);font-size:11px}
 .push-settings{margin-top:24px}.push-settings .demo-buttons button{min-height:44px}
+
+@media(max-width:600px){.setting-row:has(.segmented){flex-wrap:wrap;gap:16px}.segmented{max-width:100%;flex-wrap:wrap}}

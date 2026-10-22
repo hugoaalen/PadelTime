@@ -116,3 +116,21 @@ def test_signed_collector_delivers_tests_even_when_collection_blocked(monkeypatc
     r=TestClient(cloud.app).post('/api/collect')
     assert r.json()['skipped'] and r.json()['test_push_submitted']==1
     assert calls==['test']
+
+
+def test_device_language_saved_and_push_localized(monkeypatch):
+    records={'catalog':capture().model_dump(mode='json'),'device':{'registered':True,'favorites':[],'enabled':True,'language':'en','events':[]}}
+    monkeypatch.setattr(cloud,'current_device',lambda request:('u',copy.deepcopy(records['device'])))
+    monkeypatch.setattr(cloud,'read_snapshot',lambda:capture())
+    monkeypatch.setattr(cloud,'device_list',lambda:{'u':copy.deepcopy(records['device'])})
+    monkeypatch.setattr(cloud,'put_device',lambda identity,patch:records['device'].update(patch))
+    client=TestClient(cloud.app)
+    assert client.post('/api/notifications/sync',json={'favorites':[],'language':'es'}).status_code==200
+    assert records['device']['language']=='es'
+    assert client.post('/api/push/register',json={'token':'x'*30,'language':'en'}).status_code==200
+    assert records['device']['language']=='en'
+    assert client.post('/api/push/register',json={'token':'x'*30,'language':'invalid'}).status_code==422
+    event={'id':'match:started:2','kind':'started','message':'Source reports your followed match is live.','language':'es'}
+    assert 'está en directo' in cloud.push_message(event)
+    assert cloud.push_message({**event,'language':'en'})==event['message']
+    assert 'No es un aviso de partido real' in cloud.push_message({**event,'id':'test-1'})
