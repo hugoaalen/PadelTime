@@ -59,7 +59,7 @@ function TournamentDetail(){
   <Heading eyebrow={tournament?.category||t("TOURNAMENT")} title={tournament?.name||t("Tournament unavailable")} description={tournament?.location}/>
   <div className="day-label">
    {!source.demo&&tournament?.source_url&&<><a href={tournament.source_url} target="_blank" rel="noreferrer">{t("View original source ↗")}</a><br/></>}
-   {source.demo?t("Order of play · Demo"):t("Published schedule · order checked per court")}
+   {source.demo?t("Order of play · Demo"):list.length?t("Published schedule · order checked per court"):t("Waiting for source to publish matches.")}
   </div>
   {list.length?days.map(day=><div key={day}>
    <h2 className="day-label">{day}</h2>
