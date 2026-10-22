@@ -78,3 +78,7 @@ For each complete court day, manually arrange `match_ids`, provide HTTPS `source
 ### Validation added
 
 Backend tests exercise replay/restart deduplication, paused subscriptions, score-only changes, stale/missing observations, real status transitions, reviewed/unconfirmed predecessor events, schedule-change invalidation, venue-day selection, idle behavior, backoff and cancellation. `/api/tracking/history?match_id=` exposes latest 50 persisted changes. Actual in-play feed latency and real push delivery remain unverified.
+
+## Current integration: mixed order widget (22 October 2026)
+
+The earlier unconfirmed-order limitation is now resolved for courts that can be matched completely against the public MatchScorer Live court column linked by FIP. `collectors/matchscorer.py` joins that ordered, mixed-gender column to Premier identities; it never infers order from Premier arrays, timestamps or match IDs. Complete identity/day checks are required on every capture, so a changed or incomplete schedule withdraws confirmation automatically. See `zero-budget.md` for executed validation and current Kuwait publication limits. The optional manually reviewed order file remains supported by the local worker.

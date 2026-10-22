@@ -14,4 +14,4 @@ export async function api<T>(path:string,body?:unknown):Promise<T>{
  return r.json();
 }
 
-export type Source={demo:boolean;source:string;snapshot:boolean;stale:boolean;fetched_at?:string;date?:string;source_url?:string;warnings:string[];push?:boolean;order_confirmed?:boolean;collector?:{enabled:boolean;state:string;last_success?:string|null;last_error?:string|null;next_attempt?:string|null}};
+export type Source={match_count?:number;demo:boolean;source:string;snapshot:boolean;stale:boolean;fetched_at?:string;date?:string;source_url?:string;warnings:string[];push?:boolean;order_confirmed?:boolean;collector?:{enabled:boolean;state:string;last_success?:string|null;last_error?:string|null;next_attempt?:string|null}};

@@ -1,4 +1,8 @@
 export const spanish:Record<string,string> = {
+  "Waiting for source to publish matches.": "Esperando que la fuente publique los partidos.",
+  "Official court sequence verified.": "Orden oficial por pista verificado.",
+  "Published schedule · order checked per court": "Programación publicada · orden comprobado por pista",
+  "VERIFIED COURT SEQUENCE": "ORDEN DE PISTA VERIFICADO",
   "Home": "Inicio",
   "Tournaments": "Torneos",
   "Favorites": "Favoritos",

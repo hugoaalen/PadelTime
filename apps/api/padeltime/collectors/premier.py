@@ -9,7 +9,7 @@ import json
 import os
 import re
 import tempfile
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, timedelta
 from pathlib import Path
 from typing import Any, Dict
 from urllib.robotparser import RobotFileParser
@@ -204,7 +204,7 @@ class PublicClient:
         return response
 
 
-async def collect(day: str, slug: str, output: Path):
+async def collect(day: str, slug: str, output: Path, include_next_day: bool = False):
     date.fromisoformat(day)
     if not re.fullmatch(r'[a-z0-9-]+',slug):
         raise SourceError('Invalid tournament slug')
@@ -212,7 +212,7 @@ async def collect(day: str, slug: str, output: Path):
         try:
             cached = Snapshot.model_validate_json(output.read_text())
             age = (datetime.now(timezone.utc)-cached.fetched_at).total_seconds()
-            if cached.date == day and 0 <= age < 60 and any(t.source_url == SITE+'/es/tournaments-detail/'+slug for t in cached.tournaments):
+            if not include_next_day and cached.date == day and 0 <= age < 60 and any(t.source_url == SITE+'/es/tournaments-detail/'+slug for t in cached.tournaments):
                 return cached  # Avoid repeated requests within one minute.
         except (ValueError, OSError, TypeError):
             pass
@@ -227,26 +227,71 @@ async def collect(day: str, slug: str, output: Path):
         records.update({str(r['id']):r for r in tournament_records(detail.text)})
         source = next((r for r in records.values() if r['slug'] == slug), None)
         if not source:
-            raise SourceError('Requested tournament absent from public page')
+            # Historical detail pages may only embed the current tournament strip.
+            # This is the same public detail endpoint used by the website.
+            response = await public.request(API, '/api/tournament/getTournamentDetails?slug='+slug)
+            result = response.json()
+            source = result.get('data') if result.get('status') is True else None
+            if not isinstance(source, dict) or source.get('slug') != slug:
+                raise SourceError('Requested tournament absent from public detail response')
+            records[str(source['id'])] = source
         tournament = normalize_tournament(source)
-        players, matches = {}, {}
-        for gender in ('male','female'):
-            response = await public.request(API, MATCH_PATH, {'slug':slug,'date':day,
-                'isFavourite':False,'gender':gender,'matchStatus':'All'})
-            p, m = normalize_schedule(response.json(), tournament, source['timezone'], day)
-            players.update(p)
-            matches.update(m)
-        # Source returns reverse order in observed fixture. Sort for display only.
-        ordered = sorted(matches.values(), key=lambda m:(m.court_id, m.official_time or datetime.max.replace(tzinfo=timezone.utc), m.id))
+        from .matchscorer import WIDGET, widget_path, apply_widget_order
+        players, matches, warnings, coverage = {}, {}, [], []
+        days = [day]
+        tomorrow = (date.fromisoformat(day) + timedelta(days=1)).isoformat()
+        if include_next_day and tomorrow <= source['end_date_utc'][:10]:
+            days.append(tomorrow)
+        for requested_day in days:
+            daily_players, daily_matches = {}, {}
+            try:
+                for gender in ('male','female'):
+                    response = await public.request(API, MATCH_PATH, {'slug':slug,'date':requested_day,
+                        'isFavourite':False,'gender':gender,'matchStatus':'All'})
+                    p, m = normalize_schedule(response.json(), tournament, source['timezone'], requested_day)
+                    daily_players.update(p)
+                    for id, match in m.items():
+                        if id in daily_matches and daily_matches[id] != match:
+                            raise SourceError('Conflicting fixture identities across gender feeds')
+                        daily_matches[id] = match
+            except AccessRestricted:
+                raise
+            except (SourceError, httpx.HTTPError):
+                if requested_day == day:
+                    raise
+                warnings.append('Next-day schedule unavailable; current-day tracking continues.')
+                continue
+            if daily_matches:
+                path = widget_path(source, requested_day)
+                if path:
+                    try:
+                        widget = await public.request(WIDGET, path)
+                        apply_widget_order(daily_matches, daily_players, widget.text, WIDGET + path)
+                    except AccessRestricted:
+                        raise
+                    except (SourceError, httpx.HTTPError):
+                        warnings.append('Official order widget unavailable for '+requested_day+'; predecessor alerts suspended.')
+                coverage.append(requested_day)
+            else:
+                warnings.append('Source has not published matches for '+requested_day+'.')
+            players.update(daily_players)
+            matches.update(daily_matches)
+        # Confirmed order comes exclusively from the mixed official court column.
+        # Unknown courts retain a display order without enabling dependency alerts.
+        ordered = sorted(matches.values(), key=lambda m:(m.day, m.court_id,
+            m.order if m.order_confirmed else 0,
+            m.official_time or datetime.max.replace(tzinfo=timezone.utc), m.id))
         for index, match in enumerate(ordered, 1):
-            match.order = index
+            if not match.order_confirmed:
+                match.order = index
+        if any(not m.order_confirmed for m in ordered):
+            warnings.append('Some court sequences could not be matched completely; their predecessor alerts are suspended.')
         snapshot = Snapshot(fetched_at=capture_started, date=day,
             tournaments=[normalize_tournament(r) for r in records.values()],
             players=list(players.values()), matches=ordered,
-            coverage={tournament.id:[day]}, warnings=[
+            coverage={tournament.id:coverage}, warnings=[
                 'Public website integration, not an official API or redistribution license.',
-                'Court sequence is not explicit in the observed feed. Display order is not confirmed order of play; dependency alerts disabled.',
-                'One-time snapshot. Source status does not guarantee fresh live coverage.'])
+                *warnings])
         write_snapshot(output, snapshot)
         return snapshot
 

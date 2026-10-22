@@ -85,7 +85,7 @@ Firebase Spark project `padeltime-999e5`: anonymous Auth enabled; default Firest
 
 Production was redeployed and a signed `/api/collect` request returned HTTP 200, state `idle`, zero matches. `/api/health` returns HTTP 200 with source `premier-public-web`; `/api/tournaments` returns upcoming Kuwait Major metadata. No active tournament was discovered in public homepage metadata; no match result or live alert was fabricated. This verifies server-side collection and Firestore persistence, not full circuit coverage or mobile push.
 
-Cloudflare clock is deployed with schedule `*/3 * * * *` and `workers_dev=false`. Its destination is `https://padeltime-two.vercel.app/api/collect`; the shared signing secret is installed as a Worker secret without printing it. Public FCM VAPID configuration is saved in Vercel; physical-device push test remains pending.
+Cloudflare clock is deployed with schedule `*/3 * * * *` and `workers_dev=false`. Its destination is `https://padeltime-two.vercel.app/api/collect`; the shared signing secret is installed as a Worker secret without printing it. Public FCM VAPID configuration is saved in Vercel; physical-device push was subsequently confirmed by the owner on 22 October (app open and closed).
 
 ## Cloudflare clock — 19 October 2026
 
@@ -116,3 +116,17 @@ Old `pn-appearance` was automatically saved as dark for everyone, so it cannot d
 Authenticated registration and preference synchronization save supported language on the device record. Match alerts and explicit push tests use this device language. While an app is closed, server-generated push uses its last synchronized language; reopening synchronizes subsequent system changes. Public tournament/player names and source locations remain as supplied by the source.
 
 Verification: `node scripts/test-preferences.mjs` covers language priority/regional fallback, system vs manual themes and schedule translation. Backend tests verify language persistence, supported-language validation and translated push content. Browser checks confirmed Spanish automatic detection, switching to English/light, persistence after reload and restoration to automatic Spanish/system theme.
+
+## Verified mixed court order — 22 October 2026
+
+Device push is now confirmed by the owner on a physical iPhone, with PadelTime both open and closed; the lock-screen screenshot shows the explicit test notification. This validates delivery, not real-match source latency.
+
+The collector additionally reads the public MatchScorer Live order widget used in the official FIP website. The widget URL is derived from Premier's `organization`, `year`, `event_code` and the day offset from the tournament start. No FIP page crawler or credentials are used. A manually inspected official Milano iframe supplied the reference URL `https://widget.matchscorerlive.com/screen/oopbyday/FIP-2026-4902/9?t=tol`; Premier's Milano `event_code` is `4902`.
+
+Each widget court column supplies a mixed men's/women's sequence. Matching requires four unambiguous player identities, the same two pairs, the same court name, every fixture on the court and the selected day. Missing rows, unknown players, duplicate identities, changed pairs or a different selected day suspend predecessor alerts for that court. Numeric match IDs, generic start timestamps, API array order and scores are never used to invent order. An explicit widget `Completed` label can correct a lagging Premier status after that exact match identity is verified.
+
+Actual network validation recovered six Milano matches across 17–18 October, all six with verified order, in 13 seconds. Kuwait 23–24 October returned no matches in 7.4 seconds on 22 October. The collector now starts checking a tournament the day before its start and fetches the selected day plus the next day. The existing Cloudflare interval remains three minutes. Tournament screens group court order separately by date.
+
+The implemented chain is tested with real captured Milano source documents and injected status transitions through event generation and a mocked FCM transport, including replay deduplication. No artificial match event was sent to production devices. Real in-play latency and Kuwait coverage remain to be checked when the source publishes matches. Public access remains an undocumented website integration, not a licensed API guarantee. No paid service or billing configuration was added.
+
+For the 23 October pilot: open the PWA, follow an available qualifying player, keep alerts enabled and compare a verified court's preceding match with the official source. Qualifying men's play is listed for 14:00 Kuwait (13:00 Madrid); the main draw starts 25 October. If no matches are published, the app says it is waiting for publication. If order cannot be verified, it displays an unconfirmed sequence and withholds predecessor alerts.

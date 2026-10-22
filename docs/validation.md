@@ -33,3 +33,12 @@ Not executed: real PostgreSQL migration, licensed provider integration, external
 - Firebase Admin SDK imports and WebpushConfig message construction executed locally without credentials or network sends.
 - Production preview served on localhost:4173; browser rendered Settings and disabled notification buttons with explicit Firebase-not-configured message. Browser warning/error log empty after API restored.
 - Not executed: Vercel deployment validation, Firestore live transactions/rules emulator, actual Cloudflare Cron invocation, FCM delivery, installation on physical iPhone/Android, background push or source order verification. No accounts, repo, billing or hosted resources created.
+
+## Mixed official court order — 22 October 2026
+
+- 48 backend tests passed. Added actual-source mixed order parsing, ambiguous/incomplete/wrong-day rejection, metadata-to-widget addressing, tomorrow's discovery and two-day collection. A verified women's predecessor finishing generates one alert for Coello's following men's match; replay and repeated mocked push delivery produce no duplicates.
+- Live collector against both public sources: six Milano matches on 17–18 October, six confirmed positions, 13 seconds. Kuwait 23–24 October: zero published matches, 7.4 seconds. Historical records were not installed in production.
+- Owner confirmed actual iPhone push delivery with app open and closed; lock-screen screenshot supplied. This supersedes earlier physical-push test limitations above.
+- Real in-play source latency, Kuwait qualifying coverage and its future published court mapping are still unverified.
+
+- Frontend build and three preference tests pass. Browser verified separate 17/18 October headings and the mixed verified court sequence using an isolated local preview of real historical data.

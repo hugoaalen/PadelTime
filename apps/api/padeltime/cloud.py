@@ -103,7 +103,10 @@ def health():
     return {'demo':False,'source':snapshot.source,'snapshot':True,'stale':not 0<=age<=FRESH_SECONDS,
         'fetched_at':snapshot.fetched_at.isoformat(),'date':snapshot.date,'warnings':snapshot.warnings,
         'order_confirmed':bool(snapshot.matches) and all(m.order_confirmed for m in snapshot.matches),
-        'collector':{'enabled':True,'state':control.get('state','not_started'),'last_error':control.get('error')},
+        'match_count':len(snapshot.matches), 'coverage':snapshot.coverage,
+        'confirmed_courts':len({(m.tournament_id,m.day,m.court_id) for m in snapshot.matches if m.order_confirmed}),
+        'collector':{'enabled':True,'state':control.get('state','not_started'),'last_error':control.get('error'),
+            'last_attempt':control.get('last_attempt'),'last_success':control.get('last_success')},
         'push':True,'free_capacity':MAX_DEVICES}
 
 
@@ -257,13 +260,17 @@ async def discover_snapshot(previous):
         response=await PublicClient(client).request(SITE,'/es')
         records=tournament_records(response.text)
     active=[]
+    upcoming=[]
     for record in records:
         day=datetime.now(ZoneInfo(record['timezone'])).date().isoformat()
+        tomorrow=(datetime.fromisoformat(day)+timedelta(days=1)).date().isoformat()
         if record['start_date_utc'][:10]<=day<=record['end_date_utc'][:10]:active.append((record,day))
-    if active:
-        record,day=active[0]
+        elif record['start_date_utc'][:10] == tomorrow:
+            upcoming.append((record,tomorrow))
+    if active or upcoming:
+        record,day=(active or upcoming)[0]
         with tempfile.TemporaryDirectory() as directory:
-            return await collect(day,record['slug'],Path(directory)/'capture.json'),'running'
+            return await collect(day,record['slug'],Path(directory)/'capture.json',include_next_day=True),'running'
     # Never re-stamp old scores as fresh while discovering upcoming metadata.
     if previous:
         snapshot=Snapshot.model_validate(previous)
