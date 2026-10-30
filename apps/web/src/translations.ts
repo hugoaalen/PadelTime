@@ -1,4 +1,9 @@
 export const spanish:Record<string,string> = {
+  "No players followed on this installation. Test notifications work, but real match alerts need favorites.": "No sigues a ningún jugador en esta instalación. Las pruebas funcionan, pero los avisos reales necesitan favoritos.",
+  "Choose players": "Elegir jugadores",
+  "Match alerts are paused. Enable match alerts above to receive real events.": "Los avisos de partidos están pausados. Actívalos arriba para recibir eventos reales.",
+  "Players followed on this installation:": "Jugadores seguidos en esta instalación:",
+  "Reinstalling the PWA does not transfer favorites from another installation.": "Reinstalar la PWA no transfiere los favoritos de otra instalación.",
   "Load more players": "Ver más jugadores",
   "You can follow up to 30 players in the free pilot.": "Puedes seguir hasta 30 jugadores en el piloto gratuito.",
   "Your court. Your time.": "Tu pista. A tu tiempo.",

@@ -1,9 +1,10 @@
 import {usePreferences} from './preferences';
 import {useEffect,useState} from 'react';
 import {api} from './api';
+import {Link} from 'react-router-dom';
 import {firebaseConfigured,subscribePush} from './firebase';
 interface InstallPrompt extends Event {prompt():Promise<void>;userChoice:Promise<{outcome:string}>}
-export function PushSettings(){const {t,locale}=usePreferences();
+export function PushSettings({favoriteCount,alertsEnabled}:{favoriteCount:number;alertsEnabled:boolean}){const {t,locale}=usePreferences();
  const [status,setStatus]=useState('');
  const [busy,setBusy]=useState(false);
  const [install,setInstall]=useState<InstallPrompt|null>(null);
@@ -29,6 +30,9 @@ export function PushSettings(){const {t,locale}=usePreferences();
   <h2>{t("Install & notifications")}</h2>
   <p>{t("On iPhone: Share → Add to Home Screen, then open PadelTime from its icon. Installation alone does not allow notifications.")}</p>
   {install&&<button className="button" onClick={async()=>{await install.prompt();await install.userChoice;setInstall(null)}}>{t("Install PadelTime")}</button>}
+  {!favoriteCount&&<div className="sync-error" role="status"><span>{t("No players followed on this installation. Test notifications work, but real match alerts need favorites.")}</span> <Link to="/favorites">{t("Choose players")}</Link></div>}
+  {!alertsEnabled&&<p role="status">{t("Match alerts are paused. Enable match alerts above to receive real events.")}</p>}
+  <p>{t("Players followed on this installation:")} {favoriteCount}. {t("Reinstalling the PWA does not transfer favorites from another installation.")}</p>
   <div className="demo-buttons">
    <button disabled={!firebaseConfigured||busy} onClick={enable}>{t("Enable device notifications")}</button>
    <button disabled={!firebaseConfigured||busy} onClick={()=>action('/push/test','Test submitted. Check device notifications.')}>{t("Test notification")}</button>
