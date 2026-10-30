@@ -42,3 +42,14 @@ Not executed: real PostgreSQL migration, licensed provider integration, external
 - Real in-play source latency, Kuwait qualifying coverage and its future published court mapping are still unverified.
 
 - Frontend build and three preference tests pass. Browser verified separate 17/18 October headings and the mixed verified court sequence using an isolated local preview of real historical data.
+
+## Product iteration — 30 October 2026
+
+- Owner supplied physical iPhone screenshots of three real match alerts: predecessor finished, warm-up and live start. These verify the real source-to-device chain, superseding earlier live-delivery limitations.
+- Added immutable match context to alerts: followed player, both teams, court, tournament, official timing and final set scores. Text renders in device language and stored IANA time zone; old events retain legacy rendering. Existing event IDs and deduplication are unchanged.
+- Persistent player directory seeded from Premier's public rankings: 100 men and 100 women. The upstream endpoint caps each requested page at 100. This is an explicit initial directory, not all 14,052 source profiles. It retains previously seen players and merges current fixtures; daily bounded refresh does not depend on continued tournament participation.
+- `/api/bootstrap` combines the four public startup queries into one cacheable request. Public reads do not wait for anonymous Firebase authentication. Settings and Firebase messaging load separately; recent startup data is reused for at most two minutes only while its source timestamp is still fresh. Loading uses skeletons; private sync failures are visible.
+- Local production build: initial main JS 371.94 kB / 117.98 kB gzip versus previous production approximately 510 kB / 145 kB gzip. This is bundle-size evidence, not a measured iPhone load-time guarantee.
+- Mobile browser 390×844: verified new score rows, compact freshness bar, home match discovery without favorites, female category search for Salazar, and players absent from the current draw. No test match push was sent to production devices.
+- 52 backend tests and 3 preference tests pass; frontend production build passes.
+- Device capacity now counts meaningful subscriptions rather than empty browser sessions. Upgrade script adds an `active` query field transactionally, retaining all tokens, preferences and events. Initial execution checked 20 records, one active, without deleting any device data.

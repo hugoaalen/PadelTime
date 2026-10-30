@@ -133,7 +133,8 @@ def normalize_schedule(raw: dict, tournament: Tournament, zone: str, day: str):
                     ids.append(player_id)
                     players[player_id] = Player(id=player_id,
                         name=' '.join(filter(None,[player.get('first_name'), player.get('last_name')])),
-                        country=player.get('country_code') or '', rank=player.get('player_rank'))
+                        country=player.get('country_code') or '', rank=player.get('player_rank'),
+                        short_name=player.get('last_name') or '', gender=player.get('gender') or '')
             scores = []
             for number in range(1, 6):
                 values = [(team.get('score') or {}).get('set'+str(number)) for team in teams]

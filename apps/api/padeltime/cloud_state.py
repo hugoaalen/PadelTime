@@ -5,6 +5,7 @@ import time
 from datetime import datetime, timezone
 from .domain import Match, preceding, TERMINAL
 from .ingestion import event_kind, MESSAGES
+from .notification_text import match_context
 
 FRESH_SECONDS=300  # Free clock polls every three minutes.
 MAX_DEVICES=20
@@ -36,7 +37,9 @@ def evolve(previous,snapshot,devices,now=None):
         def add(match,kind,revision):
             key=f'{match.id}:{kind}:{revision}'
             if key not in seen:
-                inbox.insert(0,{'id':key,'match_id':match.id,'kind':kind,'message':MESSAGES[kind],'created_at':now.isoformat()});seen.add(key)
+                inbox.insert(0,{'id':key,'match_id':match.id,'kind':kind,'message':MESSAGES[kind],
+                    'details':match_context(match,snapshot,device.get('favorites',[])),
+                    'created_at':now.isoformat()});seen.add(key)
         for before,match,kind in changes:
             if kind and match.favorite(device.get('favorites',[])):add(match,kind,match.revision)
             if before and before.status not in TERMINAL and match.status=='FINISHED':

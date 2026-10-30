@@ -7,16 +7,20 @@ import json
 import os
 import secrets
 import tempfile
+import re
+import time
 from typing import Literal
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from zoneinfo import ZoneInfo
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+from .notification_text import notification_text
+from .player_catalog import ranking_players,merged_players
 from .cloud_state import valid_signature, evolve, FRESH_SECONDS, MAX_DEVICES
 from .collectors.premier import (Snapshot, PublicClient, SITE, USER_AGENT, tournament_records,
-    normalize_tournament, collect, AccessRestricted)
+    normalize_tournament, collect, AccessRestricted, API)
 from .domain import Match, tracking
 import httpx
 
@@ -50,6 +54,14 @@ def pack(value):
     return {'payload':payload}
 
 
+def device_is_active(value):
+    return bool(value.get('favorites') or value.get('token'))
+
+
+def pack_device(value):
+    return {**pack(value),'active':device_is_active(value)}
+
+
 def read_snapshot():
     value=get_record('catalog','current')
     if not value:raise HTTPException(503,'No source data yet. Run the signed collector first.')
@@ -78,12 +90,13 @@ def put_device(identity,changes):
         row=ref.get(transaction=tx,timeout=5)
         current=json.loads(row.to_dict()['payload']) if row.exists else {'favorites':[],'enabled':True,'events':[],'sent':[]}
         current.update(changes)
-        tx.set(ref,pack(current))
+        tx.set(ref,pack_device(current))
     update(db.transaction(max_attempts=2))
 
 
 def device_list():
-    rows=list(database().collection('devices').limit(MAX_DEVICES+1).stream(timeout=5))
+    from google.cloud.firestore_v1.base_query import FieldFilter
+    rows=list(database().collection('devices').where(filter=FieldFilter('active','==',True)).limit(MAX_DEVICES+1).stream(timeout=5))
     if len(rows)>MAX_DEVICES:raise HTTPException(503,'Free device capacity reached.')
     return {r.id:json.loads(r.to_dict()['payload']) for r in rows}
 
@@ -91,14 +104,12 @@ def device_list():
 @app.middleware('http')
 async def cache_headers(request,call_next):
     response=await call_next(request)
-    public=request.method=='GET' and request.url.path in {'/api/health','/api/players','/api/tournaments','/api/matches'}
+    public=request.method=='GET' and request.url.path in {'/api/bootstrap','/api/health','/api/players','/api/tournaments','/api/matches'}
     response.headers['Cache-Control']='public, s-maxage=30, max-age=0' if public and response.status_code==200 else 'no-store'
     return response
 
 
-@app.get('/api/health')
-def health():
-    snapshot=read_snapshot();control=get_record('control','collector') or {}
+def source_health(snapshot,control):
     age=(datetime.now(timezone.utc)-snapshot.fetched_at).total_seconds()
     return {'demo':False,'source':snapshot.source,'snapshot':True,'stale':not 0<=age<=FRESH_SECONDS,
         'fetched_at':snapshot.fetched_at.isoformat(),'date':snapshot.date,'warnings':snapshot.warnings,
@@ -110,8 +121,45 @@ def health():
         'push':True,'free_capacity':MAX_DEVICES}
 
 
+@app.get('/api/health')
+def health():
+    return source_health(read_snapshot(),get_record('control','collector') or {})
+
+
 @app.get('/api/players')
-def players():return read_snapshot().players
+def players():
+    return merged_players((get_record('catalog','players') or {}).get('players',[]),read_snapshot().players)
+
+
+@app.get('/api/bootstrap')
+def bootstrap():
+    snapshot=read_snapshot()
+    catalog=get_record('catalog','players') or {}
+    return {'source':source_health(snapshot,get_record('control','collector') or {}),
+        'players':merged_players(catalog.get('players',[]),snapshot.players),
+        'matches':[represented(snapshot,m) for m in snapshot.matches], 'tournaments':snapshot.tournaments}
+
+
+async def refresh_player_catalog(snapshot):
+    cached=await asyncio.to_thread(get_record,'catalog','players') or {}
+    stored=cached.get('players',[])
+    timestamp=cached.get('updated_at')
+    due=not timestamp or (datetime.now(timezone.utc)-datetime.fromisoformat(timestamp)).total_seconds()>86400
+    ranked=[]
+    if due:
+        async with httpx.AsyncClient(timeout=5,follow_redirects=False,headers={'User-Agent':USER_AGENT}) as client:
+            public=PublicClient(client)
+            for gender in ('male','female'):
+                response=await public.request(API,'/api/player/getPlayerRankings?gender='+gender+'&limit=100&page=1')
+                ranked.extend(ranking_players(response.json(),gender))
+    directory=merged_players(stored,ranked,authoritative=True)
+    directory=merged_players([p.model_dump(mode='json') for p in directory],snapshot.players)
+    value=[p.model_dump(mode='json') for p in directory]
+    if len(value)>2000:raise ValueError('Free directory capacity reached')
+    if due or value!=stored:
+        document={'players':value,'updated_at':datetime.now(timezone.utc).isoformat() if due else timestamp}
+        await asyncio.to_thread(lambda:database().collection('catalog').document('players').set(pack(document),timeout=5))
+    return len(value)
 
 @app.get('/api/tournaments')
 def tournaments():return read_snapshot().tournaments
@@ -145,18 +193,31 @@ class Preferences(BaseModel):
     enabled:bool=True
     audience:str=''  # ignored: identity comes from verified Firebase token
     language:Literal['en','es']='en'
+    timezone:str='UTC'
+
+    @field_validator('timezone')
+    @classmethod
+    def valid_timezone(cls,value):
+        try:ZoneInfo(value)
+        except (KeyError,ValueError):raise ValueError('Unknown time zone')
+        return value
 
 @app.post('/api/notifications/sync')
 def sync(request:Request,body:Preferences):
     identity,device=current_device(request)
     allowed={p.id for p in read_snapshot().players}
-    favorites=sorted(set(body.favorites)&allowed)
-    if not device.get('registered') or device.get('favorites')!=favorites or device.get('enabled')!=body.enabled or device.get('language')!=body.language:
-        if not device.get('registered') and identity not in device_list() and len(device_list())>=MAX_DEVICES:
+    # Stable Premier player IDs stay meaningful outside today's small schedule.
+    # Otherwise a closed app silently loses its subscription on the next round.
+    favorites=sorted(id for id in set(body.favorites) if id in allowed or re.fullmatch(r'pp-p-\d+',id))
+    if not device.get('registered') and not favorites and not device.get('token'):
+        return []  # Reading the app must not consume a pilot device slot.
+    if not device.get('registered') or device.get('favorites')!=favorites or device.get('enabled')!=body.enabled or device.get('language')!=body.language or device.get('timezone')!=body.timezone:
+        devices=device_list() if favorites or device.get('token') else {}
+        if (favorites or device.get('token')) and identity not in devices and len(devices)>=MAX_DEVICES:
             raise HTTPException(503,'Free pilot device capacity reached.')
         device.update(favorites=favorites,enabled=body.enabled,registered=True)
-        put_device(identity,{'favorites':favorites,'enabled':body.enabled,'registered':True,'language':body.language})
-    return device['events']
+        put_device(identity,{'favorites':favorites,'enabled':body.enabled,'registered':True,'language':body.language,'timezone':body.timezone})
+    return [{**event,**({'title':text['title'],'message':text['body']} if (text:=notification_text(event,body.language,body.timezone)) else {})} for event in device['events']]
 
 class PushToken(BaseModel):
     token:str=Field(min_length=20,max_length=4096)
@@ -165,7 +226,8 @@ class PushToken(BaseModel):
 @app.post('/api/push/register')
 def register_push(request:Request,body:PushToken):
     identity,device=current_device(request)
-    if identity not in device_list() and len(device_list())>=MAX_DEVICES:raise HTTPException(503,'Free pilot device capacity reached.')
+    devices=device_list()
+    if identity not in devices and len(devices)>=MAX_DEVICES:raise HTTPException(503,'Free pilot device capacity reached.')
     device.update(token=body.token,registered=True)
     put_device(identity,{'token':body.token,'registered':True,'language':body.language})
     return {'registered':True}
@@ -185,6 +247,8 @@ PUSH_SPANISH={
  'previous_finished':'Terminó el partido anterior. Aún se aplican el tiempo de cambio y el horario oficial.'
 }
 def push_message(event):
+    text=notification_text(event,event.get('language','en'),event.get('timezone','UTC'))
+    if text:return text['body']
     if event.get('language')!='es':return event['message']
     if event['id'].startswith('test-'):return 'PadelTime: prueba de notificación. No es un aviso de partido real.'
     kind=event.get('kind')
@@ -192,7 +256,8 @@ def push_message(event):
 
 def send_push(token,event):
     from firebase_admin import messaging
-    message=messaging.Message(token=token,data={'title':'PadelTime','body':push_message(event),
+    text=notification_text(event,event.get('language','en'),event.get('timezone','UTC'))
+    message=messaging.Message(token=token,data={'title':text['title'] if text else 'PadelTime','body':push_message(event),
         'event_id':event['id'],'url':'/matches/'+event['match_id'] if event.get('match_id') else '/'},
         webpush=messaging.WebpushConfig(headers={'TTL':'180','Urgency':'high'}))
     messaging.send(message)
@@ -295,7 +360,7 @@ def commit_capture(owner,state,snapshot,mode,previous,devices):
         cost=3+len(updates)+len(latest)
         if control.get('writes',0)+cost>12000:raise HTTPException(503,'Daily free write budget reached.')
         tx.set(db.collection('catalog').document('current'),pack(data))
-        for identity,device in updates.items():tx.set(db.collection('devices').document(identity),pack(device))
+        for identity,device in updates.items():tx.set(db.collection('devices').document(identity),pack_device(device))
         control.update(state=mode,error=None,lease_until=None,writes=control.get('writes',0)+cost,last_success=datetime.now(timezone.utc).isoformat())
         tx.set(ref,pack(control))
     commit(db.transaction(max_attempts=2))
@@ -311,7 +376,7 @@ def deliver():
             if (now-datetime.fromisoformat(event['created_at'])).total_seconds()>180:
                 sent.add(event['id']);continue
             if count>=20:break
-            try:send_push(device['token'],{**event,'language':device.get('language','en')})
+            try:send_push(device['token'],{**event,'language':device.get('language','en'),'timezone':device.get('timezone','UTC')})
             except Exception:
                 # Preserve pending event; do not mark failures delivered.
                 continue
@@ -323,6 +388,7 @@ def deliver():
 
 @app.post('/api/collect')
 async def collect_route(request:Request):
+    started=time.monotonic()
     if not valid_signature(os.getenv('COLLECT_SECRET',''),request.headers.get('x-padeltime-time',''),request.headers.get('x-padeltime-signature','')):
         raise HTTPException(401,'Invalid collector signature.')
     tests_sent=0;tests_pending=False
@@ -338,7 +404,11 @@ async def collect_route(request:Request):
         if mode=='running':
             try:sent=await asyncio.wait_for(asyncio.to_thread(deliver),timeout=5)
             except Exception:pending=True
-        return {'state':mode,'push_submitted':sent,'push_pending':pending,'matches':len(snapshot.matches),'test_push_submitted':tests_sent,'test_push_pending':tests_pending}
+        catalog_pending=False
+        if time.monotonic()-started<40:
+            try:await asyncio.wait_for(refresh_player_catalog(snapshot),timeout=8)
+            except Exception:catalog_pending=True  # Directory failures never stop match alerts.
+        return {'state':mode,'push_submitted':sent,'push_pending':pending,'matches':len(snapshot.matches),'test_push_submitted':tests_sent,'test_push_pending':tests_pending,'catalog_pending':catalog_pending}
     except Exception as exc:
         from firebase_admin import firestore
         db=database();ref=db.collection('control').document('collector')

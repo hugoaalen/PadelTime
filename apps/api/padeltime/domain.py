@@ -8,6 +8,8 @@ class Player(BaseModel):
     name: str
     country: str
     rank: Optional[int] = None
+    short_name: str = ''
+    gender: str = ''
 class Tournament(BaseModel):
     id: str
     name: str

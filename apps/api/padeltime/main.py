@@ -68,6 +68,10 @@ def events(audience):
 def health():
     if isinstance(provider, SnapshotProvider): return provider.metadata()
     return {'status':'ok','demo':True,'source':'mock','snapshot':False,'stale':False,'warnings':[]}
+
+@app.get('/api/bootstrap')
+async def bootstrap():
+    return {'source':health(),'players':await players(),'matches':await matches(),'tournaments':await tournaments()}
 @app.get('/api/players')
 async def players(): return await provider.get_players()
 @app.get('/api/tournaments')
