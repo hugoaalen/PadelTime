@@ -53,3 +53,11 @@ Not executed: real PostgreSQL migration, licensed provider integration, external
 - Mobile browser 390×844: verified new score rows, compact freshness bar, home match discovery without favorites, female category search for Salazar, and players absent from the current draw. No test match push was sent to production devices.
 - 52 backend tests and 3 preference tests pass; frontend production build passes.
 - Device capacity now counts meaningful subscriptions rather than empty browser sessions. Upgrade script adds an `active` query field transactionally, retaining all tokens, preferences and events. Initial execution checked 20 records, one active, without deleting any device data.
+
+## iOS icon background and opening safe area — 30 October 2026
+
+Installed-app PNGs are now explicitly opaque RGB on `#0b1117`; `sips` verified no alpha channel at 192×192 and 512×512. The supplied original remains untouched. Header/settings retain a separate transparent logo under `/assets/padeltime-logo.png`. Icon URLs and the shell cache were versioned to avoid reusing the previous transparent icons; manifest and theme colors match the current surfaces.
+
+Standalone layouts below 900px reserve `max(20px, env(safe-area-inset-top, 0px))` before the workspace. This moves the opening header away from iOS's top region without adding a fake blur or changing normal browser layout. Uses WebKit's documented safe-area approach: https://webkit.org/blog/7929/designing-websites-for-iphone-x/. The native iOS progressive blur and installed-icon refresh require confirmation on the user's physical iPhone; desktop browser checks cannot establish those OS effects.
+
+Production build and three preference checks pass. No backend or notification-trigger behavior changed.

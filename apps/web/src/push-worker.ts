@@ -2,8 +2,8 @@
 import {initializeApp} from 'firebase/app';
 import {getMessaging,onBackgroundMessage} from 'firebase/messaging/sw';
 declare const self:ServiceWorkerGlobalScope;
-const CACHE='padeltime-shell-v2';
-self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['/','/manifest.webmanifest','/icon-192.png?v=20261030-logo'])))});
+const CACHE='padeltime-shell-v3';
+self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['/','/manifest.webmanifest','/icon-192.png?v=20261030-dark'])))});
 self.addEventListener('activate',event=>{event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith('padeltime-shell-')&&key!==CACHE)await caches.delete(key);await self.clients.claim()})())});
 self.addEventListener('fetch',event=>{
  const url=new URL(event.request.url);
@@ -31,7 +31,7 @@ if(Object.values(config).every(Boolean)){
   const cache=await caches.open('padeltime-push-events');
   const key=new Request(new URL('/_push/'+encodeURIComponent(data.event_id||''),self.location.origin));
   if(data.event_id&&await cache.match(key))return;
-  await self.registration.showNotification(data.title||'PadelTime',{body:data.body||'Your followed match has an update.',icon:'/icon-192.png?v=20261030-logo',tag:data.event_id||'padeltime-update',data:{url:data.url||'/'}});
+  await self.registration.showNotification(data.title||'PadelTime',{body:data.body||'Your followed match has an update.',icon:'/icon-192.png?v=20261030-dark',tag:data.event_id||'padeltime-update',data:{url:data.url||'/'}});
   if(data.event_id){await cache.put(key,new Response('seen'));const keys=await cache.keys();for(const old of keys.slice(0,Math.max(0,keys.length-100)))await cache.delete(old)}
  });
 }

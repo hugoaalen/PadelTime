@@ -29,3 +29,9 @@ html[data-theme=light]{--bg:#f4f6f8;--surface:#fff;--raised:#edf2f5;--border:#dc
 .load-more{display:flex;justify-content:center;margin:24px auto 0;padding:14px 24px;border:1px solid var(--border);border-radius:12px;background:var(--raised);color:var(--text);font-size:12px}
 .brand-image{width:36px;height:36px;object-fit:contain;flex-shrink:0}.settings-logo{width:48px;height:48px;object-fit:contain;flex-shrink:0}.mini-brand>.wordmark{color:var(--text)}.mini-brand .wordmark>span{color:var(--lime)}
 @media(max-width:900px){.mini-brand{display:flex;align-items:center;gap:9px}.mini-brand .brand-image{width:32px;height:32px}}
+/* Home Screen apps can paint into the status-bar safe area. Keep the opening
+   header below that area and iOS's native top-edge blur. Normal browser layout
+   stays unchanged; the system can still blur content while scrolling. */
+@media(display-mode:standalone) and (max-width:900px){
+ .workspace{padding-top:max(20px,env(safe-area-inset-top,0px))}
+}

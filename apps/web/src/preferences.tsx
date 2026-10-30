@@ -22,7 +22,7 @@ export function PreferencesProvider({children}:{children:React.ReactNode}){
  },[]);
  const locale=language==='system'?deviceLanguage:language;
  useEffect(()=>{document.documentElement.lang=locale;document.title=locale==='es'?'PadelTime · Llega al primer punto':'PadelTime · Be there for the first point';write('pt-language',language)},[language,locale]);
- useEffect(()=>{const theme=resolveTheme(appearance,dark);document.documentElement.dataset.theme=theme;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?'#10130f':'#f5f5ef');write('pt-appearance',appearance)},[appearance,dark]);
+ useEffect(()=>{const theme=resolveTheme(appearance,dark);document.documentElement.dataset.theme=theme;document.querySelector('meta[name="theme-color"]')?.setAttribute('content',theme==='dark'?'#0b1117':'#f4f6f8');write('pt-appearance',appearance)},[appearance,dark]);
  const value=useMemo(()=>({locale,language,setLanguage,appearance,setAppearance,t:(v:string)=>translate(v,locale)}),[locale,language,appearance]);
  return <Preferences.Provider value={value}>{children}</Preferences.Provider>;
 }
