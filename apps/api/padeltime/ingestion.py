@@ -7,6 +7,8 @@ from .domain import Match, preceding, TERMINAL
 
 
 def event_kind(old, current):
+    # Team competitions can publish an individual lineup only once it is live.
+    if not old and current.national_teams and current.status == 'LIVE': return 'started'
     if old and old.status != current.status:
         if current.status == 'LIVE': return 'started'
         if current.status == 'FINISHED': return 'finished'

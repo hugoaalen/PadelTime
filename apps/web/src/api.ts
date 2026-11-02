@@ -1,6 +1,6 @@
 export type Player={id:string;name:string;country:string;rank:number|null;gender?:string};
 export type Tournament={id:string;name:string;location:string;category:string;starts:string;ends:string;status:string;source_url?:string};
-export type Match={id:string;tournament_id:string;court:string;order:number;order_confirmed:boolean;day:string;schedule_label:string;players:string[];status:string;scores:number[][];official_time:string|null;time_kind:string;round:string;tracking:{state:string;remaining:number|null;previous:Match|null;estimate:{earliest:string;latest:string;label:string}|null}};
+export type Match={id:string;tournament_id:string;court:string;order:number;order_confirmed:boolean;day:string;schedule_label:string;players:string[];status:string;scores:number[][];official_time:string|null;time_kind:string;round:string;national_teams?:string[];tracking:{state:string;remaining:number|null;previous:Match|null;estimate:{earliest:string;latest:string;label:string}|null}};
 export type Notice={id:string;title?:string;match_id:string;kind:string;message:string;created_at:string};
 export async function api<T>(path:string,body?:unknown):Promise<T>{
  const headers:Record<string,string>={};

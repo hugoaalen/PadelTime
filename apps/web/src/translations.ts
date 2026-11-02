@@ -1,4 +1,7 @@
 export const spanish:Record<string,string> = {
+  "World Cup: individual match tracking starts when lineups are published. Live alerts depend on explicit source status.": "Mundial: seguimiento individual disponible cuando se publican las alineaciones. Los avisos en directo dependen del estado confirmado por la fuente.",
+  "Women Group stage": "Femenino · Fase de grupos",
+  "Men Group stage": "Masculino · Fase de grupos",
   "No players followed on this installation. Test notifications work, but real match alerts need favorites.": "No sigues a ningún jugador en esta instalación. Las pruebas funcionan, pero los avisos reales necesitan favoritos.",
   "Choose players": "Elegir jugadores",
   "Match alerts are paused. Enable match alerts above to receive real events.": "Los avisos de partidos están pausados. Actívalos arriba para recibir eventos reales.",

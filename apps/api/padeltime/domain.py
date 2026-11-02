@@ -36,6 +36,7 @@ class Match(BaseModel):
     official_time: Optional[datetime] = None
     time_kind: str = 'unknown'
     round: str = 'Quarter-final'
+    national_teams: List[str] = Field(default_factory=list)
     revision: int = 0
     def favorite(self, ids):
         return bool(set(self.players) & set(ids))

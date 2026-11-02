@@ -13,7 +13,7 @@ def match_context(match, snapshot, favorites):
         'followed': ' / '.join(name for id, name in zip(match.players, names) if id in favorites),
         'court': match.court, 'tournament': tournament.name if tournament else '',
         'official_time': match.official_time.isoformat() if match.official_time else None,
-        'time_kind': match.time_kind, 'scores': match.scores}
+        'time_kind': match.time_kind, 'scores': match.scores, 'national_teams': match.national_teams}
 
 
 def notification_text(event, language='en', zone='UTC'):
@@ -32,6 +32,8 @@ def notification_text(event, language='en', zone='UTC'):
     label = labels.get(event['kind'], ('Actualización', 'Match update'))[0 if es else 1]
     title = f"{details.get('followed') or details['teams'][0]} · {label}"
     body = f"{details['teams'][0]} vs {details['teams'][1]}"
+    if details.get('national_teams'):
+        body += " (" + " vs ".join(details['national_teams']) + ")"
     body += f". {details['court']} · {details['tournament'].title()}."
     if event['kind'] == 'previous_finished':
         body += ' Terminó el partido anterior. Tu partido es el siguiente; pendiente de inicio.' if es else ' Previous match finished. Your match is next; start not yet confirmed.'

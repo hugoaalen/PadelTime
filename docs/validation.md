@@ -61,3 +61,34 @@ Installed-app PNGs are now explicitly opaque RGB on `#0b1117`; `sips` verified n
 Standalone layouts below 900px reserve `max(20px, env(safe-area-inset-top, 0px))` before the workspace. This moves the opening header away from iOS's top region without adding a fake blur or changing normal browser layout. Uses WebKit's documented safe-area approach: https://webkit.org/blog/7929/designing-websites-for-iphone-x/. The native iOS progressive blur and installed-icon refresh require confirmation on the user's physical iPhone; desktop browser checks cannot establish those OS effects.
 
 Production build and three preference checks pass. No backend or notification-trigger behavior changed.
+
+
+### World Cup adapter — 2 November 2026
+
+The FIP event page links the public MatchScorer order widget for FIP-2026-4516.
+The new bounded adapter reads at most two day pages per existing three-minute
+cycle, respects robots.txt and fails on access restrictions. During this event
+it takes priority over Premier discovery; Premier discovery resumes afterwards.
+No new paid services or recurring jobs are introduced.
+
+Live source verification: 48 individual matches, 192 players, eight courts on
+2 November; 41 player identities resolve uniquely to the existing circuit
+catalog. Remaining players retain stable source-specific IDs and abbreviated
+source names. Matching requires category, country, initial and complete surname;
+ambiguous identities never inherit a circuit favorite. The next day page had no
+individual fixtures at verification time. Unpublished/partial lineups cannot
+produce individual-player alerts; incomplete courts disable predecessor alerts.
+
+Court/day identity is verified from the selected widget link. Match IDs are
+stable hashes of day, category and source lineup strings, unaffected by scores,
+status or court moves. A changed lineup creates a new match identity. National
+team labels are shown as context; aggregate tie scores and following a country
+are not implemented. Official clock labels use Asia/Qatar; “Followed by” has no
+invented start time. Only explicit recognized source status labels establish
+live, warmup or terminal states. Score totals do not establish completion.
+
+Retain the previous evening until 06:00 venue time to collect final transitions
+after midnight. First published national-team lineups already explicitly live
+can generate a started alert; completed fixtures imported on initial rollout do
+not generate retrospective result alerts. Physical iPhone delivery of the next
+World Cup event remains to be checked by the user.

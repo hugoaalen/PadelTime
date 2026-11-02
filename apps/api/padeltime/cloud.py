@@ -208,7 +208,7 @@ def sync(request:Request,body:Preferences):
     allowed={p.id for p in read_snapshot().players}
     # Stable Premier player IDs stay meaningful outside today's small schedule.
     # Otherwise a closed app silently loses its subscription on the next round.
-    favorites=sorted(id for id in set(body.favorites) if id in allowed or re.fullmatch(r'pp-p-\d+',id))
+    favorites=sorted(id for id in set(body.favorites) if id in allowed or re.fullmatch(r'(?:pp-p-\d+|fip-p-[a-f0-9]{24})',id))
     if not device.get('registered') and not favorites and not device.get('token'):
         return []  # Reading the app must not consume a pilot device slot.
     if not device.get('registered') or device.get('favorites')!=favorites or device.get('enabled')!=body.enabled or device.get('language')!=body.language or device.get('timezone')!=body.timezone:
@@ -321,6 +321,13 @@ def acquire():
 
 
 async def discover_snapshot(previous):
+    from .collectors import worldcup
+    if worldcup.active(datetime.now(timezone.utc)):
+        catalog=await asyncio.to_thread(get_record,'catalog','players') or {}
+        from .domain import Player
+        known=merged_players(catalog.get('players',[]),[Player.model_validate(p) for p in (previous or {}).get('players',[])])
+        return await worldcup.collect(known),'running'
+
     async with httpx.AsyncClient(timeout=10,follow_redirects=False,headers={'User-Agent':USER_AGENT}) as client:
         response=await PublicClient(client).request(SITE,'/es')
         records=tournament_records(response.text)
